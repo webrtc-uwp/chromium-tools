@@ -19,7 +19,7 @@ def bootstrapIfNeeded(module_name, module_path, module_deps_url):
   except ImportError:
     sys.path.append(os.path.join(os.path.dirname(__file__),
                                  BOOTSTRAPPED_FILES_DIR,
-                                 module_path)) 
+                                 module_path))
     try:
       imp.find_module(module_name)
       return
