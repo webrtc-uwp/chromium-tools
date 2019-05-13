@@ -27,8 +27,8 @@ import tempfile
 
 # TODO(agrieve): Move build_utils.WriteDepFile into a non-android directory.
 _REPOSITORY_ROOT = os.path.abspath(os.path.dirname(os.path.dirname(__file__)))
-sys.path.append(os.path.join(_REPOSITORY_ROOT, 'build/android/gyp/util'))
-import build_utils
+sys.path.insert(0, os.path.join(_REPOSITORY_ROOT, 'build/android/gyp'))
+from util import build_utils
 
 
 # Paths from the root of the tree to directories to skip.
@@ -182,6 +182,13 @@ SPECIAL_CASES = {
     os.path.join('third_party', 'catapult'): {
         "Name": "catapult",
         "URL": "https://github.com/catapult-project/catapult",
+        "License": "BSD",
+        "License File": "NOT_SHIPPED",
+    },
+    os.path.join('third_party', 'crashpad', 'crashpad', 'third_party',
+                 'lss'): {
+        "Name": "linux-syscall-support",
+        "URL": "https://chromium.googlesource.com/linux-syscall-support/",
         "License": "BSD",
         "License File": "NOT_SHIPPED",
     },

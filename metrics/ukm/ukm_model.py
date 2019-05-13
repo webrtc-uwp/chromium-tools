@@ -18,16 +18,13 @@ _LOWERCASE_NAME_FN = lambda n: n.get('name').lower()
 
 _ENUMERATION_TYPE = models.ObjectNodeType(
     'enumeration',
-    attributes=[
-      ('export', unicode, r'^(?i)(|true|false)$'),
-    ],
+    attributes=[],
     single_line=True)
 
 _QUANTILES_TYPE = models.ObjectNodeType(
     'quantiles',
     attributes=[
       ('type', unicode, None),
-      ('export', unicode, r'^(?i)(|true|false)$'),
     ],
     single_line=True)
 
@@ -40,7 +37,9 @@ _INDEX_TYPE = models.ObjectNodeType(
 
 _STATISTICS_TYPE =  models.ObjectNodeType(
     'statistics',
-    attributes=[],
+    attributes=[
+      ('export', unicode, r'^(?i)(|true|false)$'),
+    ],
     children=[
         models.ChildType('quantiles', _QUANTILES_TYPE, multiple=False),
         models.ChildType('enumeration', _ENUMERATION_TYPE, multiple=False),
@@ -91,6 +90,7 @@ _EVENT_TYPE =  models.ObjectNodeType(
 
 _UKM_CONFIGURATION_TYPE = models.ObjectNodeType(
     'ukm-configuration',
+    alphabetization=[('event', _LOWERCASE_NAME_FN)],
     extra_newlines=(2, 1, 1),
     indent=False,
     children=[

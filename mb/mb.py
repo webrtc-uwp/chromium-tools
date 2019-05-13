@@ -399,9 +399,9 @@ class MetaBuildWrapper(object):
       ('infra/tools/luci/logdog/butler/${platform}',
        'git_revision:e1abc57be62d198b5c2f487bfb2fa2d2eb0e867c'),
       ('infra/tools/luci/vpython-native/${platform}',
-       'git_revision:2973c0809cdc7122b7123e42b163a54d4983503f'),
+       'git_revision:cc09450f1c27c0034ec08b1f6d63bbc298294763'),
       ('infra/tools/luci/vpython/${platform}',
-       'git_revision:2973c0809cdc7122b7123e42b163a54d4983503f'),
+       'git_revision:cc09450f1c27c0034ec08b1f6d63bbc298294763'),
     ]
     for pkg, vers in cipd_packages:
       cmd.append('--cipd-package=.swarming_module:%s:%s' % (pkg, vers))
@@ -945,15 +945,22 @@ class MetaBuildWrapper(object):
     win = self.platform == 'win32' or 'target_os="win"' in vals['gn_args']
     possible_runtime_deps_rpaths = {}
     for target in ninja_targets:
+      target_type = isolate_map[target]['type']
+      label = isolate_map[target]['label']
+      stamp_runtime_deps = 'obj/%s.stamp.runtime_deps' % label.replace(':', '/')
       # TODO(https://crbug.com/876065): 'official_tests' use
       # type='additional_compile_target' to isolate tests. This is not the
       # intended use for 'additional_compile_target'.
-      if (isolate_map[target]['type'] == 'additional_compile_target' and
+      if (target_type == 'additional_compile_target' and
           target != 'official_tests'):
         # By definition, additional_compile_targets are not tests, so we
         # shouldn't generate isolates for them.
         raise MBErr('Cannot generate isolate for %s since it is an '
                     'additional_compile_target.' % target)
+      elif fuchsia or ios or target_type == 'generated_script':
+        # iOS and Fuchsia targets end up as groups.
+        # generated_script targets are always actions.
+        rpaths = [stamp_runtime_deps]
       elif android:
         # Android targets may be either android_apk or executable. The former
         # will result in runtime_deps associated with the stamp file, while the
@@ -961,20 +968,16 @@ class MetaBuildWrapper(object):
         label = isolate_map[target]['label']
         rpaths = [
             target + '.runtime_deps',
-            'obj/%s.stamp.runtime_deps' % label.replace(':', '/')]
-      elif ios or fuchsia:
-        # iOS and Fuchsia targets end up as groups.
-        label = isolate_map[target]['label']
-        rpaths = ['obj/%s.stamp.runtime_deps' % label.replace(':', '/')]
-      elif (isolate_map[target]['type'] == 'script' or
-            isolate_map[target]['type'] == 'fuzzer' or
+            stamp_runtime_deps]
+      elif (target_type == 'script' or
+            target_type == 'fuzzer' or
             isolate_map[target].get('label_type') == 'group'):
         # For script targets, the build target is usually a group,
         # for which gn generates the runtime_deps next to the stamp file
         # for the label, which lives under the obj/ directory, but it may
         # also be an executable.
         label = isolate_map[target]['label']
-        rpaths = ['obj/%s.stamp.runtime_deps' % label.replace(':', '/')]
+        rpaths = [stamp_runtime_deps]
         if win:
           rpaths += [ target + '.exe.runtime_deps' ]
         else:
@@ -1154,7 +1157,8 @@ class MetaBuildWrapper(object):
     test_type = isolate_map[target]['type']
 
     executable = isolate_map[target].get('executable', target)
-    executable_suffix = '.exe' if is_win else ''
+    executable_suffix = isolate_map[target].get(
+        'executable_suffix', '.exe' if is_win else '')
 
     cmdline = []
     extra_files = [
@@ -1166,7 +1170,12 @@ class MetaBuildWrapper(object):
       self.WriteFailureAndRaise('We should not be isolating %s.' % target,
                                 output_path=None)
 
-    if test_type == 'fuzzer':
+    if test_type == 'generated_script':
+      cmdline = [
+          '../../testing/test_env.py',
+          isolate_map[target]['script'],
+      ]
+    elif test_type == 'fuzzer':
       cmdline = [
         '../../testing/test_env.py',
         '../../tools/code_coverage/run_fuzz_target.py',

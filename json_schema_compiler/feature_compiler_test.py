@@ -33,7 +33,6 @@ class FeatureCompilerTest(unittest.TestCase):
 
   def setUp(self):
     feature_compiler.ENABLE_ASSERTIONS = False
-    feature_compiler.STRINGS_TO_UNICODE = True
 
   def testFeature(self):
     # Test some basic feature parsing for a sanity check.
@@ -100,6 +99,15 @@ class FeatureCompilerTest(unittest.TestCase):
   def testImproperValue(self):
     f = self._parseFeature({'noparent': False})
     self._hasError(f, 'Illegal value: "False"')
+
+  def testEmptyList(self):
+    f = self._parseFeature({'contexts': []})
+    self._hasError(f, 'List must specify at least one element.')
+
+  def testEmptyListWithAllowEmpty(self):
+    # `dependencies` is the only key that allows an empty list.
+    f = self._parseFeature({'dependencies': []})
+    self.assertFalse(f.GetErrors())
 
   def testApiFeaturesNeedContexts(self):
     f = self._parseFeature({'dependencies': 'alpha',
